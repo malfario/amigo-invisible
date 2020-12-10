@@ -10,6 +10,7 @@ pytest = "*"
 
 [packages]
 amigo-invisible = {editable = true,path = "."}
+jinja2 = "*"
 
 [requires]
 python_version = "3.9"
