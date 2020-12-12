@@ -1,33 +1,26 @@
-from typing import List, Tuple
+from typing import List, Tuple, Iterator, Set
 from dataclasses import dataclass, field
 import logging
 import random
-
-
-@dataclass
-class Participante:
-    nombre: str
-    email: str
-    excludes: List[str] = field(default_factory=list)
+from .participante import Participante
 
 
 class EmptyBag(Exception):
     """La bolsa está vacía y algún participante no está emparejado"""
 
 
-def sorteo(
+def pair_generator(
     participantes: List[Participante],
-) -> List[Tuple[Participante, Participante]]:
+) -> Iterator[Tuple[Participante, Participante]]:
 
     log = logging.getLogger(__name__)
-    seleccionados: List[Tuple[str, str]] = []
+    seleccionados: Set[str] = set()
     nombres = set([x.nombre for x in participantes])
 
-    random.shuffle(participantes)
     for participante in participantes:
         log.debug(f'participante: {participante}')
 
-        excludes = set(participante.excludes + [x for x, y in seleccionados])
+        excludes = participante.excludes | seleccionados
         excludes.add(participante.nombre)
         log.debug(f'excludes: {excludes}')
 
@@ -39,13 +32,23 @@ def sorteo(
         elegido = random.choice(rest)
         log.debug(f'elegido: {elegido}')
 
-        seleccionados.append((elegido, participante.nombre))
+        seleccionados.add(elegido)
         log.debug('----')
 
-    return [
-        (
-            [x for x in participantes if x.nombre == m][0],
-            [x for x in participantes if x.nombre == n][0],
+        yield (
+            participante,
+            next(x for x in participantes if x.nombre == elegido),
         )
-        for n, m in seleccionados
-    ]
+
+
+def sorteo(
+    participantes: List[Participante],
+) -> List[Tuple[Participante, Participante]]:
+    log = logging.getLogger(__name__)
+    sorteo = []
+    random.shuffle(participantes)
+    for participante, elegido in pair_generator(participantes):
+        log.debug(f'{participante} regala a {elegido}')
+        log.debug('----')
+        sorteo.append((participante, elegido))
+    return sorteo

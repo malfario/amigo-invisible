@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
-from .sorteo import Participante, sorteo, EmptyBag
-from .config import Config
+from .sorteo import sorteo, EmptyBag
+from .participante import Participante
 
 
 def main():
