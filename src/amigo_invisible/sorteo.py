@@ -1,39 +1,62 @@
-from typing import List, Tuple, Iterator, Set
+from typing import List, Tuple, Iterator, Set, Optional, Dict, Any
 from dataclasses import dataclass, field
-import logging
+from datetime import datetime, timezone
+from pathlib import Path
 import random
+import json
 from .participante import Participante
+from . import participante
 
 
 class EmptyBag(Exception):
     """La bolsa está vacía y algún participante no está emparejado"""
 
 
+@dataclass
+class Sorteo:
+    fecha: datetime
+    maestro: str
+    participantes: List[Participante]
+    parejas: List[Tuple[Participante, Participante]]
+
+    def to_json(self) -> Dict[str, Any]:
+        return dict(
+            fecha=str(self.fecha),
+            maestro=self.maestro,
+            participantes=[x.to_json() for x in self.participantes],
+            parejas=[[x.to_json(), y.to_json()] for x, y in self.parejas],
+        )
+
+    @staticmethod
+    def from_json(doc: Dict[str, Any]) -> 'Sorteo':
+        return Sorteo(
+            fecha=datetime.fromisoformat(doc['fecha']),
+            maestro=doc['maestro'],
+            participantes=[Participante.from_json(x) for x in doc['participantes']],
+            parejas=[
+                (Participante.from_json(x), Participante.from_json(y))
+                for x, y in doc['parejas']
+            ],
+        )
+
+
 def pair_generator(
     participantes: List[Participante],
-) -> Iterator[Tuple[Participante, Participante]]:
-
-    log = logging.getLogger(__name__)
+) -> Iterator[Tuple[Participante, Optional[Participante]]]:
     seleccionados: Set[str] = set()
     nombres = set([x.nombre for x in participantes])
 
     for participante in participantes:
-        log.debug(f'participante: {participante}')
-
         excludes = participante.excludes | seleccionados
         excludes.add(participante.nombre)
-        log.debug(f'excludes: {excludes}')
 
         rest = list(nombres - excludes)
-        log.debug(f'rest: {rest}')
         if not rest:
-            raise EmptyBag('La bolsa está vacía')
+            yield (participante, None)
+            continue
 
         elegido = random.choice(rest)
-        log.debug(f'elegido: {elegido}')
-
         seleccionados.add(elegido)
-        log.debug('----')
 
         yield (
             participante,
@@ -41,14 +64,46 @@ def pair_generator(
         )
 
 
-def sorteo(
+def new(
+    maestro: str,
     participantes: List[Participante],
-) -> List[Tuple[Participante, Participante]]:
-    log = logging.getLogger(__name__)
-    sorteo = []
+) -> Sorteo:
+    parejas = []
+
     random.shuffle(participantes)
     for participante, elegido in pair_generator(participantes):
-        log.debug(f'{participante} regala a {elegido}')
-        log.debug('----')
-        sorteo.append((participante, elegido))
-    return sorteo
+        if elegido is None:
+            raise EmptyBag("Bolsa vacía")
+        parejas.append((participante, elegido))
+
+    return Sorteo(
+        fecha=datetime.now(timezone.utc),
+        maestro=maestro,
+        participantes=participantes,
+        parejas=parejas,
+    )
+
+
+def save_json(sorteo: Sorteo, filename: Path) -> None:
+    with open(filename, 'w') as f:
+        json.dump(sorteo, f)
+
+
+def load_json(filename: Path) -> Sorteo:
+    with open(filename, 'r') as f:
+        doc = json.load(f)
+        return from_json(doc)
+
+
+def valid_pairs(parejas: List[Tuple[Participante, Participante]]) -> bool:
+    participantes = set([x.nombre for x, y in parejas])
+    seleccion = set([y.nombre for x, y in parejas])
+    return participantes ^ seleccion == set()
+
+
+def is_valid(sorteo: Sorteo) -> bool:
+    return (
+        sorteo.maestro.strip() != ""
+        and len(sorteo.parejas) == len(sorteo.parejas)
+        and valid_pairs(sorteo.parejas)
+    )

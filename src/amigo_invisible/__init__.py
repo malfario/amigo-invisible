@@ -1,6 +1,6 @@
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass
-from .sorteo import sorteo, EmptyBag
+from .sorteo import Sorteo
 from .participante import Participante
 
 
