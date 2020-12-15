@@ -11,8 +11,8 @@ def test_empty_bag():
         Participante(nombre='carlos', email='carlos@example.com', excludes={'luis'}),
         Participante(nombre='adela', email='adela@example.com'),
     ]
-    with pytest.raises(EmptyBag):
-        amigo_invisible.sorteo(maestro='luis', participantes=participantes)
+    s = next(amigo_invisible.sorteo(maestro='luis', participantes=participantes))
+    assert s is None
 
 
 def test_sorteo():
@@ -20,7 +20,7 @@ def test_sorteo():
         Participante(nombre='luis', email='luis@example.com'),
         Participante(nombre='carlos', email='carlos@example.com'),
     ]
-    s = amigo_invisible.sorteo(maestro='luis', participantes=participantes)
+    s = next(amigo_invisible.sorteo(maestro='luis', participantes=participantes))
 
     try:
         s.validate()
@@ -38,7 +38,7 @@ def test_to_json():
         Participante(nombre='luis', email='luis@example.com'),
         Participante(nombre='carlos', email='carlos@example.com'),
     ]
-    s = amigo_invisible.sorteo(maestro='luis', participantes=participantes)
+    s = next(amigo_invisible.sorteo(maestro='luis', participantes=participantes))
     doc = s.to_json()
     assert doc['maestro'] == 'luis'
     assert type(datetime.fromisoformat(doc['fecha'])) == datetime
@@ -49,7 +49,7 @@ def test_from_json():
         Participante(nombre='luis', email='luis@example.com'),
         Participante(nombre='carlos', email='carlos@example.com'),
     ]
-    s = amigo_invisible.sorteo(maestro='luis', participantes=participantes)
+    s = next(amigo_invisible.sorteo(maestro='luis', participantes=participantes))
     doc = s.to_json()
     ss = Sorteo.from_json(doc)
     assert ss == s

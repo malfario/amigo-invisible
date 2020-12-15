@@ -1,5 +1,5 @@
 import random
-from typing import List
+from typing import List, Optional, Iterator
 from datetime import datetime, timezone
 from .sorteo import Sorteo, pair_generator, EmptyBag
 from .participante import Participante
@@ -8,18 +8,23 @@ from .participante import Participante
 def sorteo(
     maestro: str,
     participantes: List[Participante],
-) -> Sorteo:
-    parejas = []
+) -> Iterator[Optional[Sorteo]]:
+    while True:
+        try:
+            parejas = []
+            random.shuffle(participantes)
 
-    random.shuffle(participantes)
-    for participante, elegido in pair_generator(participantes):
-        if elegido is None:
-            raise EmptyBag("Bolsa vacía")
-        parejas.append((participante.nombre, elegido.nombre))
+            for participante, elegido in pair_generator(participantes):
+                if elegido is None:
+                    raise EmptyBag("Bolsa vacía")
+                parejas.append((participante.nombre, elegido.nombre))
 
-    return Sorteo(
-        fecha=datetime.now(timezone.utc),
-        maestro=maestro,
-        participantes=participantes,
-        parejas=parejas,
-    )
+            yield Sorteo(
+                fecha=datetime.now(timezone.utc),
+                maestro=maestro,
+                participantes=participantes,
+                parejas=parejas,
+            )
+
+        except EmptyBag:
+            yield None
