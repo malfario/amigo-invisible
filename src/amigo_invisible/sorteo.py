@@ -17,14 +17,26 @@ class Sorteo:
     fecha: datetime
     maestro: str
     participantes: List[Participante]
-    parejas: List[Tuple[Participante, Participante]]
+    parejas: List[Tuple[str, str]]
+
+    def is_valid(self) -> bool:
+        def validate_pairs(parejas: List[Tuple[str, str]]) -> bool:
+            participantes = set([x for x, y in parejas])
+            seleccion = set([y for x, y in parejas])
+            return participantes ^ seleccion == set()
+
+        return (
+            self.maestro.strip() != ""
+            and len(self.parejas) == len(self.parejas)
+            and validate_pairs(self.parejas)
+        )
 
     def to_json(self) -> Dict[str, Any]:
         return dict(
             fecha=str(self.fecha),
             maestro=self.maestro,
             participantes=[x.to_json() for x in self.participantes],
-            parejas=[[x.to_json(), y.to_json()] for x, y in self.parejas],
+            parejas=[[x, y] for x, y in self.parejas],
         )
 
     @staticmethod
@@ -33,10 +45,7 @@ class Sorteo:
             fecha=datetime.fromisoformat(doc['fecha']),
             maestro=doc['maestro'],
             participantes=[Participante.from_json(x) for x in doc['participantes']],
-            parejas=[
-                (Participante.from_json(x), Participante.from_json(y))
-                for x, y in doc['parejas']
-            ],
+            parejas=[(x, y) for x, y in doc['parejas']],
         )
 
 
@@ -74,7 +83,7 @@ def new(
     for participante, elegido in pair_generator(participantes):
         if elegido is None:
             raise EmptyBag("Bolsa vacía")
-        parejas.append((participante, elegido))
+        parejas.append((participante.nombre, elegido.nombre))
 
     return Sorteo(
         fecha=datetime.now(timezone.utc),
@@ -86,24 +95,11 @@ def new(
 
 def save_json(sorteo: Sorteo, filename: Path) -> None:
     with open(filename, 'w') as f:
-        json.dump(sorteo, f)
+        doc = sorteo.to_json()
+        json.dump(doc, f)
 
 
 def load_json(filename: Path) -> Sorteo:
     with open(filename, 'r') as f:
         doc = json.load(f)
-        return from_json(doc)
-
-
-def valid_pairs(parejas: List[Tuple[Participante, Participante]]) -> bool:
-    participantes = set([x.nombre for x, y in parejas])
-    seleccion = set([y.nombre for x, y in parejas])
-    return participantes ^ seleccion == set()
-
-
-def is_valid(sorteo: Sorteo) -> bool:
-    return (
-        sorteo.maestro.strip() != ""
-        and len(sorteo.parejas) == len(sorteo.parejas)
-        and valid_pairs(sorteo.parejas)
-    )
+        return Sorteo.from_json(doc)

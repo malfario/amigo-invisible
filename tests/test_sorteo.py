@@ -20,7 +20,7 @@ def test_sorteo():
         Participante(nombre='carlos', email='carlos@example.com'),
     ]
     s = sorteo.new(maestro='luis', participantes=participantes)
-    assert sorteo.is_valid(s)
+    assert s.is_valid()
 
     resultado = s.parejas
     assert len(resultado) == 2
