@@ -4,12 +4,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 import random
 import json
+
 from .participante import Participante
-from . import participante
 
 
 class EmptyBag(Exception):
     """La bolsa está vacía y algún participante no está emparejado"""
+
+
+class SorteoInvalido(Exception):
+    """El sorteo no es formalmente válido"""
 
 
 @dataclass
@@ -19,17 +23,17 @@ class Sorteo:
     participantes: List[Participante]
     parejas: List[Tuple[str, str]]
 
-    def is_valid(self) -> bool:
+    def validate(self):
         def validate_pairs(parejas: List[Tuple[str, str]]) -> bool:
             participantes = set([x for x, y in parejas])
             seleccion = set([y for x, y in parejas])
             return participantes ^ seleccion == set()
 
-        return (
-            self.maestro.strip() != ""
-            and len(self.parejas) == len(self.parejas)
-            and validate_pairs(self.parejas)
-        )
+        if self.maestro.strip() == "":
+            raise SorteoInvalido("No se ha especificado maestro de ceremonias")
+
+        if not validate_pairs(self.parejas):
+            raise SorteoInvalido("El emparejamiento no es vålido")
 
     def to_json(self) -> Dict[str, Any]:
         return dict(
@@ -71,26 +75,6 @@ def pair_generator(
             participante,
             next(x for x in participantes if x.nombre == elegido),
         )
-
-
-def new(
-    maestro: str,
-    participantes: List[Participante],
-) -> Sorteo:
-    parejas = []
-
-    random.shuffle(participantes)
-    for participante, elegido in pair_generator(participantes):
-        if elegido is None:
-            raise EmptyBag("Bolsa vacía")
-        parejas.append((participante.nombre, elegido.nombre))
-
-    return Sorteo(
-        fecha=datetime.now(timezone.utc),
-        maestro=maestro,
-        participantes=participantes,
-        parejas=parejas,
-    )
 
 
 def save_json(sorteo: Sorteo, filename: Path) -> None:

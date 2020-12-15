@@ -1,12 +1,25 @@
-from typing import List, Optional, Dict, Any
-from dataclasses import dataclass
-from .sorteo import Sorteo
+import random
+from typing import List
+from datetime import datetime, timezone
+from .sorteo import Sorteo, pair_generator, EmptyBag
 from .participante import Participante
 
 
-def main():
-    pass
+def sorteo(
+    maestro: str,
+    participantes: List[Participante],
+) -> Sorteo:
+    parejas = []
 
+    random.shuffle(participantes)
+    for participante, elegido in pair_generator(participantes):
+        if elegido is None:
+            raise EmptyBag("Bolsa vacía")
+        parejas.append((participante.nombre, elegido.nombre))
 
-if __name__ == '__main__':
-    main()
+    return Sorteo(
+        fecha=datetime.now(timezone.utc),
+        maestro=maestro,
+        participantes=participantes,
+        parejas=parejas,
+    )
