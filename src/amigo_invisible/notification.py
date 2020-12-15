@@ -1,4 +1,6 @@
 import smtplib, ssl
+import email.utils
+from email.mime.text import MIMEText
 
 
 class EmailNotifier:
@@ -12,12 +14,13 @@ class EmailNotifier:
         context = ssl.create_default_context()
         with smtplib.SMTP_SSL(self._host, self._port, context=context) as server:
             server.login(self._user, self._password)
-            message = '''\
-                Subject: Tu amijo invisible
-
-                Hola desde la app el amijo invisible!
-            '''
-            server.sendmail('rleblic@gmail.com', recipient, message)
+            message = MIMEText('Hola desde la app el amijo invisible!')
+            message['Subject'] = 'Sorteo del amigo invisible'
+            message['To'] = email.utils.formataddr(('Amijo', recipient))
+            message['From'] = email.utils.formataddr(
+                ('no-reply', 'no-reply@amijo-invisible.com')
+            )
+            server.sendmail(self._user, recipient, message.as_string())
 
 
 def gmail_notifier(user: str, token: str) -> EmailNotifier:
