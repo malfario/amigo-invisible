@@ -6,7 +6,6 @@ import os
 
 from .sorteo import Sorteo, SorteoInvalido
 from .participante import Participante
-from . import sorteo
 from . import notification
 import amigo_invisible
 
@@ -22,18 +21,26 @@ def main(args):
             doc = json.load(f)
             participantes = [Participante.from_json(x) for x in doc['participantes']]
 
-        s = amigo_invisible.sorteo(
+        # Crea un generador de sorteos
+        sorteo_generator = amigo_invisible.sorteo(
             maestro=args.maestro,
             participantes=participantes,
         )
-        s.validate()
 
+        # Encuentra un sorteo válido
+        while (sorteo := next(sorteo_generator)) is None:
+            continue
+
+        # Valida el sorteo
+        sorteo.validate()
+
+        # Envía notificación a los participantes
         notifier = notification.gmail_notifier(user, token)
-        for participante, elegido in s.parejas:
-            p = next(x for x in s.participantes if x.nombre == participante)
-            notifier.send_email('rleblic@gmail.com')
+        for participante, elegido in sorteo.parejas:
+            p = next(x for x in sorteo.participantes if x.nombre == participante)
+            # notifier.send_email('xxx@gmail.com')
 
-        print(json.dumps(s.to_json()))
+        print(json.dumps(sorteo.to_json()))
     except Exception as e:
         print(e, file=sys.stderr)
         exit(1)
