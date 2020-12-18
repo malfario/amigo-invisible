@@ -45,26 +45,25 @@ async def main(args):
 
         # Envía notificación a los participantes
         notification_tasks = []
-        notifier = notification.gmail_notifier(user, token)
-
-        for partname, selname in sorteo.parejas:
-            amijo = next(x for x in participantes if x.nombre == partname)
-            message = notification.email_message(
-                sorteo=sorteo,
-                titulo=titulo,
-                mensaje=mensaje,
-                amijo=amijo.nombre,
-                elegido=selname,
-            )
-            task = asyncio.create_task(
-                notifier.send_notification(recipient=amijo.email, message=message)
-            )
-            notification_tasks.append(task)
-
-        await asyncio.gather(*notification_tasks)
+        async with notification.gmail_notifier(user, token) as notifier:
+            for partname, selname in sorteo.parejas:
+                amijo = next(x for x in participantes if x.nombre == partname)
+                message = notification.email_message(
+                    sorteo=sorteo,
+                    titulo=titulo,
+                    mensaje=mensaje,
+                    amijo=amijo.nombre,
+                    elegido=selname,
+                )
+                task = asyncio.create_task(
+                    notifier.send_notification(recipient=amijo.email, message=message)
+                )
+                notification_tasks.append(task)
+            await asyncio.gather(*notification_tasks)
         print(json.dumps(sorteo.to_json()))
     except Exception as e:
         print(e, file=sys.stderr)
+        raise
         exit(1)
 
 
