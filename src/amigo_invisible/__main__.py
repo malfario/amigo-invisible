@@ -1,3 +1,4 @@
+import asyncio
 import argparse
 import json
 import sys
@@ -6,24 +7,32 @@ import os
 
 from .sorteo import Sorteo, SorteoInvalido
 from .participante import Participante
-from . import notification
+from .notification import email as notification
 import amigo_invisible
 
 
-def main(args):
+async def main(args):
     try:
         user = os.getenv('GMAIL_USER')
         token = os.getenv('GMAIL_TOKEN')
-        if user is None or token is None:
+        if not all({user, token}):
             raise Exception('Missing Gmail account info')
 
-        with open(args.participantes) as f:
+        with open(args.config) as f:
             doc = json.load(f)
-            participantes = [Participante.from_json(x) for x in doc['participantes']]
+
+        titulo = doc.get('titulo')
+        maestro = doc.get('maestro')
+        mensaje = doc.get('mensaje', {'plain': '', 'html': ''})
+        participantes = [
+            Participante.from_json(x) for x in doc.get('participantes', [])
+        ]
+        if not all({titulo, maestro, len(participantes)}):
+            raise Exception('Missing draft config data')
 
         # Crea un generador de sorteos
         sorteo_generator = amigo_invisible.sorteo(
-            maestro=args.maestro,
+            maestro=maestro,
             participantes=participantes,
         )
 
@@ -35,11 +44,24 @@ def main(args):
         sorteo.validate()
 
         # Envía notificación a los participantes
+        notification_tasks = []
         notifier = notification.gmail_notifier(user, token)
-        for participante, elegido in sorteo.parejas:
-            p = next(x for x in sorteo.participantes if x.nombre == participante)
-            # notifier.send_email('xxx@gmail.com')
 
+        for partname, selname in sorteo.parejas:
+            amijo = next(x for x in participantes if x.nombre == partname)
+            message = notification.email_message(
+                sorteo=sorteo,
+                titulo=titulo,
+                mensaje=mensaje,
+                amijo=amijo.nombre,
+                elegido=selname,
+            )
+            task = asyncio.create_task(
+                notifier.send_notification(recipient=amijo.email, message=message)
+            )
+            notification_tasks.append(task)
+
+        await asyncio.gather(*notification_tasks)
         print(json.dumps(sorteo.to_json()))
     except Exception as e:
         print(e, file=sys.stderr)
@@ -48,8 +70,5 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--maestro', help='El maestro de ceremonias.')
-    parser.add_argument(
-        '--participantes', help='JSON conteniendo la lista de participantes.'
-    )
-    main(args=parser.parse_args())
+    parser.add_argument('config', help='Datos del sorteo codificados como JSON')
+    asyncio.run(main(args=parser.parse_args()))

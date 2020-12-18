@@ -1,0 +1,16 @@
+¡Hola {{ amijo }}!
+
+En el sorteo de este año del Amijo Invisible, celebrado el {{ fecha }} por el Gran
+Maestro de Ceremonias {{ maestro }}, has resultado elegido/a como amigo/amiga
+invisible de:
+
+
+{{ elegido }}
+
+
+{{ mensaje }}
+
+¡Feliz Navidad!
+
+--
+{{ maestro }}, Gran Maestro de Ceremonias
