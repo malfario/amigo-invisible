@@ -12,6 +12,7 @@ pytest = "*"
 amigo-invisible = {editable = true,path = "."}
 jinja2 = "*"
 python-dotenv = "*"
+aiosmtplib = "*"
 
 [requires]
 python_version = "3.9"
