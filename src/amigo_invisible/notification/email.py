@@ -27,7 +27,6 @@ class EmailNotifier(Notifier):
         try:
             await server.connect()
             await server.login(self._user, self._password)
-            print('sending notification:', recipient)
             await server.send_message(
                 message=message,
                 sender=self._user,
