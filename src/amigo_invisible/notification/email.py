@@ -34,7 +34,6 @@ class EmailNotifier(Notifier):
         self._server.close()
 
     async def send_notification(self, recipient: str, message: Any):
-        print('sending notification to', recipient)
         await self._server.send_message(
             message=message,
             sender=self._user,
