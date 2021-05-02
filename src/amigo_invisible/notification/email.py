@@ -1,10 +1,10 @@
 import ssl
 import aiosmtplib
-from typing import Any, Dict
 from pathlib import Path
 from datetime import datetime
 from email.message import Message
 from email.mime.text import MIMEText
+from typing import Any, Dict, AsyncGenerator
 from email.mime.multipart import MIMEMultipart
 import jinja2
 
@@ -18,22 +18,28 @@ class EmailNotifier(Notifier):
         self._port = port
         self._user = user
         self._password = password
+        self._server = aiosmtplib.SMTP(
+            self._host,
+            self._port,
+            use_tls=True,
+            tls_context=ssl.create_default_context(),
+        )
+
+    async def __aenter__(self):
+        await self._server.connect()
+        await self._server.login(self._user, self._password)
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, tb):
+        self._server.close()
 
     async def send_notification(self, recipient: str, message: Any):
-        context = ssl.create_default_context()
-        server = aiosmtplib.SMTP(
-            self._host, self._port, use_tls=True, tls_context=context
+        print('sending notification to', recipient)
+        await self._server.send_message(
+            message=message,
+            sender=self._user,
+            recipients=recipient,
         )
-        try:
-            await server.connect()
-            await server.login(self._user, self._password)
-            await server.send_message(
-                message=message,
-                sender=self._user,
-                recipients=recipient,
-            )
-        finally:
-            server.close()
 
 
 def gmail_notifier(user: str, token: str) -> EmailNotifier:
