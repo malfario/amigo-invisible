@@ -25,8 +25,8 @@ class Sorteo:
 
     def validate(self):
         def validate_pairs(parejas: List[Tuple[str, str]]) -> bool:
-            participantes = set([x for x, y in parejas])
-            seleccion = set([y for x, y in parejas])
+            participantes = {x for x, y in parejas}
+            seleccion = {y for x, y in parejas}
             return participantes ^ seleccion == set()
 
         if self.maestro.strip() == "":
@@ -57,7 +57,7 @@ def pair_generator(
     participantes: List[Participante],
 ) -> Iterator[Tuple[Participante, Optional[Participante]]]:
     seleccionados: Set[str] = set()
-    nombres = set([x.nombre for x in participantes])
+    nombres = {x.nombre for x in participantes}
 
     for participante in participantes:
         excludes = participante.excludes | seleccionados
